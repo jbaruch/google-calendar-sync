@@ -56,6 +56,7 @@ function shouldBeSynced(personalEvent, personalCalendarId) {
   const dayOfWeek = startTime.getDay();
   const durationHours = (endTime - startTime) / (1000 * 60 * 60);
 
+  //Feel free to remove conditions or modify duration
   if (personalEvent.isAllDayEvent() || durationHours > 4 || isWeekend()) {
     return false;
   }
@@ -78,8 +79,7 @@ function shouldBeSynced(personalEvent, personalCalendarId) {
     return !isEventFree;
   } catch (error) {
     console.log(`Error during Freebusy.query for event [${personalEvent.getTitle()}]: ${error.toString()}`);
-    // Consider how you want to handle errors - maybe assume busy, or skip synchronization for this event
-    return false; // or true, depending on your error handling strategy
+    return true; // if failed, let's block anyway
   }
 }
 
