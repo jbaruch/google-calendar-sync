@@ -2,7 +2,7 @@
 ### Motivation
 Do you have a personal calendar with stuff going on (i.e., have a life outside of work)? This script is for you. It will block time on your work calendar corresponding to the events in your personal calendar (while making them private). No more discovering your colleague scheduled a Zoom call while you're at the dentist!
 
-While services like Recaim.ai do a wonderful job of syncing your personal and work calendar, your corporate restrictions might prevent you from sharing work calendar event details with third-party services (for a good reason). 
+While services like [Recaim.ai](https://reclaim.ai/) do a wonderful job of syncing your personal and work calendar, your corporate restrictions might prevent you from sharing work calendar event details with third-party services (for a good reason). 
 
 This app script is installed on your work account and probably complies with your workspace requirements.
 
