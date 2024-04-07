@@ -1,9 +1,9 @@
 # google-calendar-sync: Google App Script for syncing two calendars
 
-Do you have a personal calendar with stuff going on (i.e., have a life outside of work)? This script is for you. Google Calendar Sync is a Google Apps Script designed to synchronize events from your personal calendar to your work calendar, marking them as private in your work calendar. This ensures your availability is accurately reflected across both calendars without oversharing personal details. It is ideal for anyone looking to more effectively manage their work and personal life balance.
+Do you have a personal calendar with stuff going on (i.e., have a life outside of work)? This script is for you. Google Calendar Sync is a Google Apps Script designed to synchronize events from your personal calendar to your work calendar, marking them as private in your work calendar. This ensures your availability accurately reflects across both calendars without oversharing personal details. It is ideal for anyone looking to manage their work and personal life balance more effectively.
 
 ### Motivation
-While services like [Recaim.ai](https://reclaim.ai/) do a wonderful job of syncing your personal and work calendar, your corporate restrictions might prevent you from sharing work calendar event details with third-party services (for a good reason). 
+While services like [Recaim.ai](https://reclaim.ai/) do a fantastic job of syncing your personal and work calendar, your corporate restrictions might prevent you from sharing work calendar event details with third-party services (for a good reason). 
 
 This app script is installed on your work account, Google App Engine, so it is probably in line with your workspace requirements.
 
@@ -24,7 +24,7 @@ Before you start, ensure the following:
    * Assign your personal calendar's email to the personalCalendarId constant within the script.
    * Adjust settings like the block event's name (it's private, so don't sweat on it too much) and how far in the future events should be blocked according to your preferences.
    * Review line 60 to decide on including all-day events, lengthy events (probably out-of-office events and such), and weekends.  
-   * Don't forget to click save (the "save" icon, kids, is  a floppy disk, google it or ask ChatGPT).
+   * Don't forget to click save (the "save" icon, kids, is  a floppy disk; google it or ask ChatGPT).
 4. Naming:
    * Rename the project from "Untitled Project" to something useful, like "Calendar Sync".
    * While on it, rename the script file from `Code.gs` to `CalendarSync.gs` for good measure.
@@ -60,7 +60,7 @@ Contributions are welcome! If you'd like to improve Google Calendar Sync, please
  * Submit a pull request with a clear explanation of your changes.
 
 ### License
-This project is open-sourced under the Apache 2 License. See the LICENSE file for more details.
+This project is open-sourced under the Apache 2 License. See the License tab for more details.
 
 ### Contact
-For support or queries, please open an issue on the GitHub repository's issues page.
+Please open an issue on the GitHub repository's issues page for support or queries.
