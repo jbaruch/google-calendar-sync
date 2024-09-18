@@ -35,6 +35,9 @@ function  syncCalendars() {
   // Clean up work events that no longer match any personal event
   cleanupWorkEvents(workEventsFiltered, personalEvents, workCal);
 
+  // Add this check to remove any potential duplicates
+  removeDuplicateWorkEvents(workCal, workEventTitle, today, endDate);
+
   console.log(`Finished syncing calendars.`);
   logSummary();
 }
@@ -186,6 +189,21 @@ function cleanupWorkEvents(workEventsFiltered, personalEvents, workCal) {
       console.log(`Deleted orphaned work event: ${workEvent.getId()}`);
     }
   });
+}
+
+function removeDuplicateWorkEvents(workCal, workEventTitle, startDate, endDate) {
+    const events = workCal.getEvents(startDate, endDate).filter(e => e.getTitle() === workEventTitle);
+    const seen = new Map();
+    events.forEach(event => {
+        const key = `${event.getStartTime().getTime()}-${event.getEndTime().getTime()}`;
+        if (seen.has(key)) {
+            event.deleteEvent();
+            counters.deleted++;
+            console.log(`Deleted duplicate work event: ${event.getId()}`);
+        } else {
+            seen.set(key, true);
+        }
+    });
 }
 
 function logSummary() {
