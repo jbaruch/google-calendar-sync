@@ -56,6 +56,21 @@ function shouldBeSynced(personalEvent, personalCalendarId) {
   const dayOfWeek = startTime.getDay();
   const durationHours = (endTime - startTime) / (1000 * 60 * 60);
 
+  // Check if the user is on the guest list and has accepted the event
+  const guestList = personalEvent.getGuestList(true);  // true to include self
+  const personalUserGuest = guestList.find(guest => guest.getEmail() === personalCalendarId);
+  
+  if (!personalUserGuest) {
+    console.log(`Event [${personalEvent.getTitle()}] - User is not on guest list. Skipping.`);
+    return false;
+  }
+
+  // Check if the user has explicitly accepted the event
+  if (personalUserGuest.getGuestStatus() !== CalendarApp.GuestStatus.YES) {
+    console.log(`Event [${personalEvent.getTitle()}] is not accepted in personal calendar. Skipping.`);
+    return false;
+  }
+
   //Feel free to remove conditions or modify duration
   if (personalEvent.isAllDayEvent() || durationHours > 4 || isWeekend()) {
     return false;
