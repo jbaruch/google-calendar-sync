@@ -6,54 +6,9 @@ let counters = {
 };
 
 /**
- * Synchronizes events from a personal calendar to a work calendar, with specific rules.
+ * Checks if a personal event should be synced based on various criteria.
  */
-function  syncCalendars() {
-  const personalCalendarId = "yourpersonalcalendar@gmail.com"; //TODO CHANGE THIS!
-  const workEventTitle = "Time blocked"; // Text for new events in work calendar
-  const today = new Date();
-  const endDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from today
-
-  const personalCal = CalendarApp.getCalendarById(personalCalendarId);
-  const workCal = CalendarApp.getDefaultCalendar();
-
-  const personalEvents = personalCal.getEvents(today, endDate);
-  const workEvents = workCal.getEvents(today, endDate);
-
-  console.log(`Number of workEvents: ${workEvents.length}`);  
-  console.log(`Number of personalEvents: ${personalEvents.length}`);
-
-  let workEventsFiltered = filterWorkEvents(workEvents, workEventTitle);
-
-  // Analyze personal events and take appropriate actions
-  personalEvents.forEach(personalEvent => {
-    if (shouldBeSynced(personalEvent, personalCalendarId)) {
-      syncEvent(personalEvent, workEventsFiltered, workCal, workEventTitle, personalCalendarId);
-    }
-  });
-
-  // Clean up work events that no longer match any personal event
-  cleanupWorkEvents(workEventsFiltered, personalEvents, workCal);
-
-  // Add this check to remove any potential duplicates
-  removeDuplicateWorkEvents(workCal, workEventTitle, today, endDate);
-
-  console.log(`Finished syncing calendars.`);
-  logSummary();
-}
-
-/**
- * Filters work events that match a specific title.
- */
-function filterWorkEvents(workEvents, title) {
-  return workEvents.filter(event => event.getTitle() === title);
-}
-
-/**
- * Checks if a personal event should be synced based on various criteria, including
- * if the event is marked as 'Busy', is not all-day, lasts 4 hours or less, and occurs on a weekday.
- */
-function shouldBeSynced(personalEvent, personalCalendarId) {
+function shouldBeSynced(personalEvent, personalCalendarId, workCalendarId) {
   const startTime = personalEvent.getStartTime();
   const endTime = personalEvent.getEndTime();
   const dayOfWeek = startTime.getDay();
@@ -74,8 +29,13 @@ function shouldBeSynced(personalEvent, personalCalendarId) {
     return false;
   }
 
-  //Feel free to remove conditions or modify duration
-  if (personalEvent.isAllDayEvent() || durationHours > 4 || isWeekend()) {
+  // Check if work account is already added to the event
+  if (guestList.some(guest => guest.getEmail() === workCalendarId)) {
+    console.log(`Event [${personalEvent.getTitle()}] already includes work account. Skipping sync.`);
+    return false;
+  }
+
+  if (personalEvent.isAllDayEvent() || durationHours > 4 || dayOfWeek == 0 || dayOfWeek == 6) {
     return false;
   }
 
@@ -97,43 +57,43 @@ function shouldBeSynced(personalEvent, personalCalendarId) {
     return !isEventFree;
   } catch (error) {
     console.log(`Error during Freebusy.query for event [${personalEvent.getTitle()}]: ${error.toString()}`);
-    return true; // if failed, let's block anyway
+    return false;
   }
-}
-
-function isWeekend (dayOfWeek) {
-  return dayOfWeek == 0 || dayOfWeek == 6;
 }
 
 /**
  * Syncs a personal event to the work calendar if necessary, updating counters along the way.
  */
-function syncEvent(personalEvent, workEventsFiltered, workCal, workEventTitle, personalCalendarId) {
-    // Try to find an existing matching work event
-    const existingWorkEvent = findMatchingWorkEvent(personalEvent, workEventsFiltered);
+function syncEvent(personalEvent, workCal, workEventTitle) {
+    const existingWorkEvent = findMatchingWorkEvent(personalEvent, workCal.getEvents(personalEvent.getStartTime(), personalEvent.getEndTime()));
     const personalTitle = personalEvent.getTitle();
     const personalDesc = personalEvent.getDescription();
     const expectedWorkDesc = personalTitle + '\n\n' + personalDesc;
 
     if (existingWorkEvent) {
-        // Check if the existing event already matches the personal event
         if (existingWorkEvent.getDescription() === expectedWorkDesc && existingWorkEvent.getTitle() === workEventTitle) {
-            // Event matches perfectly; no need to check free/busy status or update the event
             console.log(`Event [${personalEvent.getTitle()}] already matches the work event. Skipping.`);
-            counters.matchedAndSkipped++; // Assuming you have a counter for matched and skipped events
-            return; // Skip further checks
+            counters.matchedAndSkipped++;
         } else {
-            // If it exists but doesn't match exactly, it needs updating
             updateWorkEvent(existingWorkEvent, personalEvent, workEventTitle);
             counters.updated++;
         }
     } else {
-        // If no matching work event exists, proceed with creation after necessary checks
-        if (shouldBeSynced(personalEvent, personalCalendarId)) {
-            createWorkEvent(workCal, personalEvent, workEventTitle);
-            counters.added++;
-        }
+        createWorkEvent(workCal, personalEvent, workEventTitle);
+        counters.added++;
     }
+}
+
+/**
+ * Finds a matching work event for a given personal event.
+ */
+function findMatchingWorkEvent(personalEvent, workEvents) {
+  return workEvents.find(workEvent => {
+    const startDiff = Math.abs(workEvent.getStartTime().getTime() - personalEvent.getStartTime().getTime());
+    const endDiff = Math.abs(workEvent.getEndTime().getTime() - personalEvent.getEndTime().getTime());
+    // Allow for a small time difference (e.g., 1 minute) to account for potential minor discrepancies
+    return startDiff <= 60000 && endDiff <= 60000;
+  });
 }
 
 /**
@@ -142,17 +102,9 @@ function syncEvent(personalEvent, workEventsFiltered, workCal, workEventTitle, p
 function updateWorkEvent(workEvent, personalEvent, title) {
     workEvent.setTitle(title);
     workEvent.setDescription(`${personalEvent.getTitle()}\n\n${personalEvent.getDescription()}`);
+    workEvent.setTime(personalEvent.getStartTime(), personalEvent.getEndTime());
     workEvent.setVisibility(CalendarApp.Visibility.PRIVATE);
     console.log(`Updated work event: ${workEvent.getId()}`);
-}
-
-/**
- * Finds a matching work event for a given personal event.
- */
-function findMatchingWorkEvent(personalEvent, workEventsFiltered) {
-  return workEventsFiltered.find(workEvent =>
-    workEvent.getStartTime().getTime() === personalEvent.getStartTime().getTime() &&
-    workEvent.getEndTime().getTime() === personalEvent.getEndTime().getTime());
 }
 
 /**
@@ -161,49 +113,46 @@ function findMatchingWorkEvent(personalEvent, workEventsFiltered) {
 function createWorkEvent(workCal, personalEvent, title) {
   const newEvent = workCal.createEvent(title, personalEvent.getStartTime(), personalEvent.getEndTime(), {
     description: `${personalEvent.getTitle()}\n\n${personalEvent.getDescription()}`,
-    visibility: 'private'
+    visibility: CalendarApp.Visibility.PRIVATE
   });
   newEvent.removeAllReminders();
   console.log(`Created new work event: ${newEvent.getId()}`);
 }
 
 /**
- * Cleans up work events that no longer have a corresponding personal event.
+ * Comprehensive cleanup function for work events.
+ * Removes unnecessary work events, including:
+ * - Duplicates
+ * - Those corresponding to personal events where work account is already added
+ * - Those no longer matching any personal event
  */
-function cleanupWorkEvents(workEventsFiltered, personalEvents, workCal) {
-  const personalEventTimes = personalEvents.map(event => ({
-    start: event.getStartTime().getTime(),
-    end: event.getEndTime().getTime()
-  }));
+function cleanupWorkEvents(workCal, personalCal, workCalendarId, workEventTitle, startDate, endDate) {
+  const workEvents = workCal.getEvents(startDate, endDate).filter(e => e.getTitle() === workEventTitle);
+  const personalEvents = personalCal.getEvents(startDate, endDate);
+  const seen = new Map();
 
-  workEventsFiltered.forEach(workEvent => {
-    const workEventTime = {
-      start: workEvent.getStartTime().getTime(),
-      end: workEvent.getEndTime().getTime()
-    };
-    const isOrphaned = !personalEventTimes.some(personalEventTime =>
-      personalEventTime.start === workEventTime.start && personalEventTime.end === workEventTime.end);
+  workEvents.forEach(workEvent => {
+    const key = `${workEvent.getStartTime().getTime()}-${workEvent.getEndTime().getTime()}`;
+    
+    const correspondingPersonalEvent = personalEvents.find(personalEvent => 
+      personalEvent.getStartTime().getTime() === workEvent.getStartTime().getTime() &&
+      personalEvent.getEndTime().getTime() === workEvent.getEndTime().getTime()
+    );
 
-    if (isOrphaned) {
-      workEvent.deleteEvent();
-      console.log(`Deleted orphaned work event: ${workEvent.getId()}`);
+    if (seen.has(key) || 
+        (correspondingPersonalEvent && correspondingPersonalEvent.getGuestList().some(guest => guest.getEmail() === workCalendarId)) ||
+        !correspondingPersonalEvent) {
+      try {
+        workEvent.deleteEvent();
+        counters.deleted++;
+        console.log(`Deleted unnecessary work event: ${workEvent.getId()}`);
+      } catch (error) {
+        console.log(`Error deleting work event: ${error.toString()}`);
+      }
+    } else {
+      seen.set(key, true);
     }
   });
-}
-
-function removeDuplicateWorkEvents(workCal, workEventTitle, startDate, endDate) {
-    const events = workCal.getEvents(startDate, endDate).filter(e => e.getTitle() === workEventTitle);
-    const seen = new Map();
-    events.forEach(event => {
-        const key = `${event.getStartTime().getTime()}-${event.getEndTime().getTime()}`;
-        if (seen.has(key)) {
-            event.deleteEvent();
-            counters.deleted++;
-            console.log(`Deleted duplicate work event: ${event.getId()}`);
-        } else {
-            seen.set(key, true);
-        }
-    });
 }
 
 function logSummary() {
@@ -212,4 +161,31 @@ function logSummary() {
     console.log(`Events matched and skipped (no update needed): ${counters.matchedAndSkipped}`);
     console.log(`Events updated: ${counters.updated}`);
     console.log(`Events deleted: ${counters.deleted}`);
+}
+
+/**
+ * Main function to synchronize calendars.
+ */
+function syncCalendars() {
+  const personalCalendarId = "personal@example.com";
+  const workCalendarId = "work@example.com";
+  const workEventTitle = "Time blocked";
+  const today = new Date();
+  const endDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from today
+
+  const personalCal = CalendarApp.getCalendarById(personalCalendarId);
+  const workCal = CalendarApp.getCalendarById(workCalendarId);
+
+  const personalEvents = personalCal.getEvents(today, endDate);
+
+  personalEvents.forEach(personalEvent => {
+    if (shouldBeSynced(personalEvent, personalCalendarId, workCalendarId)) {
+      syncEvent(personalEvent, workCal, workEventTitle);
+    }
+  });
+
+  cleanupWorkEvents(workCal, personalCal, workCalendarId, workEventTitle, today, endDate);
+
+  console.log(`Finished syncing calendars.`);
+  logSummary();
 }
