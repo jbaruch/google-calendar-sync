@@ -23,7 +23,7 @@ Before you start, ensure the following:
 3. Configuration:
    * Assign your personal calendar's email to the personalCalendarId constant within the script.
    * Adjust settings like the block event's name (it's private, so don't sweat on it too much) and how far in the future events should be blocked according to your preferences.
-   * Review line 60 to decide on including all-day events, lengthy events (probably out-of-office events and such), and weekends.  
+   * Review line 38 to decide on including all-day events, lengthy events (probably out-of-office events and such), and weekends.  
    * Don't forget to click save (the "save" icon, kids, is  a floppy disk; google it or ask ChatGPT).
 4. Naming:
    * Rename the project from "Untitled Project" to something useful, like "Calendar Sync".
